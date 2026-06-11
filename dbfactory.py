@@ -4,6 +4,8 @@ from config import config
 def connect():
     connection = None
     try:
+        
+        # Create connection to database
         params = config()
         print('Connection to postgreSQL database')
         connection = ps.connect(**params)
