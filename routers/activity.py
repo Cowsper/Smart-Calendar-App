@@ -1,7 +1,14 @@
+# Used for debugging, remove in final product
+import sys
+from os import path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
 from fastapi import FastAPI, HTTPException, APIRouter
 from datetime import datetime, timezone
 import psycopg as ps
 from config import config
+
+
 
 router = APIRouter(prefix="/activites", tags=["Activities"])
 
