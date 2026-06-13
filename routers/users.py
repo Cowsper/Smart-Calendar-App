@@ -101,7 +101,7 @@ def register_user(password: str, first_name: str, last_name: str, email: str, ph
 
 # Deletes a user in user_table
 @router.delete("/")
-def delete_user(user_id):
+def delete_user(user_id: int):
     try:
         with get_db_connection() as conn:
             with conn.cursor() as crsr:
@@ -110,6 +110,7 @@ def delete_user(user_id):
                             WHERE user_id = %s;
                             """, (user_id,))
                 conn.commit()
+                return{"message": f"user_id {user_id} deleted."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -132,11 +133,12 @@ def login_user(email: str, login_password: str):
                     raise HTTPException(status_code=401, detail="Invalid Email")
                 # Store details
                 user_id, stored_password_hash = user_data
+                # convert the stored password into bytes
                 stored_password_hash = stored_password_hash.encode('utf-8')
                 # Checks entered password against hashed password
                 if not (checkpw(login_password_bytes, stored_password_hash)):
                     raise HTTPException(status_code=401, detail="Invalid Password")
-                
+                # return user_id as a response
                 return {"message": "login success!", "user_id": user_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
