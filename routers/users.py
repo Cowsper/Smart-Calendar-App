@@ -3,6 +3,7 @@ from datetime import datetime, timezone, date
 import psycopg as ps
 from config import config
 from security import is_password_valid, hash_password
+from bcrypt import checkpw
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -100,5 +101,42 @@ def register_user(password: str, first_name: str, last_name: str, email: str, ph
 
 # Deletes a user in user_table
 @router.delete("/")
-def delete_user():
-    pass
+def delete_user(user_id):
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as crsr:
+                crsr.execute("""
+                            DELETE FROM user_table
+                            WHERE user_id = %s;
+                            """, (user_id,))
+                conn.commit()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Login for a user
+
+@router.post("/login")
+def login_user(email: str, login_password: str):
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as crsr:
+                # SQL select statement to retrieved user_id and hashed password using email
+                login_password_bytes = login_password.encode('utf-8')
+                crsr.execute("""
+                            SELECT user_id, password_hash FROM user_table
+                            WHERE email = %s;
+                            """, (email,))
+                user_data = crsr.fetchone()
+                # If the cursor doesn't fetch anything, email is not in database
+                if not user_data:
+                    raise HTTPException(status_code=401, detail="Invalid Email")
+                # Store details
+                user_id, stored_password_hash = user_data
+                stored_password_hash = stored_password_hash.encode('utf-8')
+                # Checks entered password against hashed password
+                if not (checkpw(login_password_bytes, stored_password_hash)):
+                    raise HTTPException(status_code=401, detail="Invalid Password")
+                
+                return {"message": "login success!", "user_id": user_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
