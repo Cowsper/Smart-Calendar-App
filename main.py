@@ -13,9 +13,8 @@ def get_db_connection():
     return ps.connect(**params)
 
 app.include_router(users.router)
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+app.include_router(events.router)
+
 
 
 

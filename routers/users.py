@@ -96,6 +96,7 @@ def register_user(password: str, first_name: str, last_name: str, email: str, ph
                              VALUES (%s, %s, %s, %s, %s, %s)
                              """, (password_hash, first_name, last_name, email, phone_number, date_of_birth))
                 conn.commit()
+                return {"message": "Account Successfully Registered!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
