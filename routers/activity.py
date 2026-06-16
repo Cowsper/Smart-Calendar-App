@@ -4,7 +4,7 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException, APIRouter
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import psycopg as ps
 from config import config
 
@@ -73,3 +73,44 @@ def delete_activity(activity_id: int):
                 return {"message": f"{activity_id} successfully deleted."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/average")
+def calc_avg_time(event_name: str):
+    # set event_name to lowercase
+    event_name = event_name.lower()
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as crsr:
+                # Retrieve event_id from event_name
+                crsr.execute("""
+                             SELECT event_id FROM event_table
+                             WHERE event_name = %s;
+                             """, (event_name,))
+                row = crsr.fetchone()
+                # raises error if event doesn't exist
+                if not row:
+                    raise HTTPException(status_code=404, detail="Event does not exist.")
+                event_id = row[0]
+                # gets all start and end times of every activity of the event selected
+                crsr.execute("""
+                            SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY (end_time - start_time)) 
+                            FROM activity_table 
+                            WHERE event_id = %s;
+                            """, (event_id,))
+                avg_time = crsr.fetchone()
+                avg_time = avg_time[0]
+                if avg_time is None:
+                    raise HTTPException(status_code=404, detail=f"No activities for {event_name}.")
+
+                
+                crsr.execute("""
+                             UPDATE event_table
+                             SET average_time = %s
+                             WHERE event_id = %s;
+                             """, (avg_time, event_id))
+                conn.commit()
+                return {"message": f"average time of {event_name} is {str(avg_time)}."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+                    
+                
