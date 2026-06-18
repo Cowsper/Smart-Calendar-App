@@ -28,7 +28,9 @@ def get_events():
                     events.append({"event_id": row[0], 
                                   "event_name": row[1],
                                   "category": row[2],
-                                  "average_time": row[3]
+                                  "global_average_start_time": row[3],
+                                  "global_average_end_time": row[4],
+                                  "global_average_duration": row[5]
                                   })
                 return events
     except Exception as e:

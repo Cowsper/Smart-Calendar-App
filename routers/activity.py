@@ -73,9 +73,9 @@ def delete_activity(activity_id: int):
                 return {"message": f"{activity_id} successfully deleted."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-@router.post("/average")
-def calc_avg_time(event_name: str):
+
+@router.post("/average-start")
+def calc_avg_start_time(event_name: str):
     # set event_name to lowercase
     event_name = event_name.lower()
     try:
@@ -93,24 +93,68 @@ def calc_avg_time(event_name: str):
                 event_id = row[0]
                 # gets all start and end times of every activity of the event selected
                 crsr.execute("""
-                            SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY (end_time - start_time)) 
+                            SELECT 
+                                percentile_cont(0.5) WITHIN GROUP (ORDER BY (start_time::time)),
+                                percentile_cont(0.5) WITHIN GROUP (ORDER BY (end_time::time)),
+                                percentile_cont(0.5) WITHIN GROUP (ORDER BY (end_time - start_time)) 
                             FROM activity_table 
                             WHERE event_id = %s;
                             """, (event_id,))
-                avg_time = crsr.fetchone()
-                avg_time = avg_time[0]
-                if avg_time is None:
+                avg_start_time, avg_end_time, avg_duration = crsr.fetchone()
+                if avg_start_time is None:
                     raise HTTPException(status_code=404, detail=f"No activities for {event_name}.")
-
-                
                 crsr.execute("""
                              UPDATE event_table
-                             SET average_time = %s
+                             SET global_average_start_time = %s,
+                                global_average_end_time = %s,
+                                global_average_duration = %s
                              WHERE event_id = %s;
-                             """, (avg_time, event_id))
+                             """, (avg_start_time, avg_end_time, avg_duration, event_id))
                 conn.commit()
-                return {"message": f"average time of {event_name} is {str(avg_time)}."}
+                return {"message": f"For {event_name}",
+                        "global_average_start_time": str(avg_start_time),
+                        "global_average_end_time": str(avg_end_time),
+                        "average_duration": str(avg_duration)
+                }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+# @router.post("/average")
+# def calc_avg_time(event_name: str):
+#     # set event_name to lowercase
+#     event_name = event_name.lower()
+#     try:
+#         with get_db_connection() as conn:
+#             with conn.cursor() as crsr:
+#                 # Retrieve event_id from event_name
+#                 crsr.execute("""
+#                              SELECT event_id FROM event_table
+#                              WHERE event_name = %s;
+#                              """, (event_name,))
+#                 row = crsr.fetchone()
+#                 # raises error if event doesn't exist
+#                 if not row:
+#                     raise HTTPException(status_code=404, detail="Event does not exist.")
+#                 event_id = row[0]
+#                 # gets all start and end times of every activity of the event selected
+#                 crsr.execute("""
+#                             SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY (end_time - start_time)) 
+#                             FROM activity_table 
+#                             WHERE event_id = %s;
+#                             """, (event_id,))
+#                 avg_time = crsr.fetchone()
+#                 avg_time = avg_time[0]
+#                 if avg_time is None:
+#                     raise HTTPException(status_code=404, detail=f"No activities for {event_name}.")
+
+                
+#                 crsr.execute("""
+#                              UPDATE event_table
+#                              SET average_time = %s
+#                              WHERE event_id = %s;
+#                              """, (avg_time, event_id))
+#                 conn.commit()
+#                 return {"message": f"average time of {event_name} is {str(avg_time)}."}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
                     
                 

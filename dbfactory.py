@@ -39,7 +39,9 @@ def connect():
                             event_id SERIAL PRIMARY KEY NOT NULL,
                             event_name VARCHAR(255) NOT NULL,
                             category VARCHAR(255) NOT NULL,
-                            average_time INTERVAL
+                            global_average_start_time TIME,
+                            global_average_end_time TIME,
+                            global_average_time INTERVAL
                         );
                         """)
             
@@ -60,6 +62,8 @@ def connect():
             
             connection.commit()
             print("Activity Table Added (If doesn't exist)")     
+            
+            
                
     except(Exception, ps.DatabaseError) as error:
         print(error)
